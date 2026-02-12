@@ -8,13 +8,13 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
     html,body{height:100%;margin:0;font-family:'Inter', 'Segoe UI', sans-serif;background:#f8fafc;color:#0f172a;overflow:hidden;}
-    #map{height:100vh;width:100vw;z-index: 1;} /* 恢復明亮 */
+    #map{height:100vh;width:100vw;z-index: 1;}
 
-    /* Stats Bar - 改為更精緻的深色板 */
-    .info-bar{position:absolute;top:20px;right:20px;background:rgba(15, 23, 42, 0.85);padding:15px;border-radius:12px;display:flex;flex-direction:column;gap:10px;z-index:900;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
-    .info-item{display:flex;justify-content:space-between;align-items:center;min-width:130px; gap: 15px;}
+    /* Stats Bar */
+    .info-bar{position:absolute;top:20px;right:20px;background:rgba(15, 23, 42, 0.88);padding:15px;border-radius:12px;display:flex;flex-direction:column;gap:10px;z-index:900;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+    .info-item{display:flex;justify-content:space-between;align-items:center;min-width:140px; gap: 20px;}
     .info-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;opacity:0.7;}
-    .info-value{font-size:1.1rem;font-weight:800;font-variant-numeric: tabular-nums;}
+    .info-value{font-size:1.15rem;font-weight:800;font-variant-numeric: tabular-nums;}
     .status-alive{color:#4ade80;} .status-dead{color:#f87171;}
 
     /* Conveyor Belt System */
@@ -33,48 +33,43 @@
       display: flex;
       align-items: center;
       position: absolute;
-      left: 50%; /* 基準點在螢幕中線 */
+      left: 50%;
       transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
       will-change: transform;
       height: 100%;
     }
     .city-card {
-      min-width: 300px; /* 固定寬度便於精確計算位移 */
+      min-width: 320px;
       text-align: center;
       transition: all 0.5s ease;
-      opacity: 0.5; /* 提高非當前題目的亮度 */
-      transform: scale(0.85);
+      opacity: 0.4;
+      transform: scale(0.8);
       font-size: 1.6rem;
       font-weight: 700;
-      color: #334155;
-      filter: blur(1px);
+      color: #475569;
     }
     .city-card.active {
       opacity: 1;
-      transform: scale(1.1);
-      color: #1e293b;
-      filter: blur(0);
-      text-shadow: 0 0 15px rgba(255,255,255,0.8);
+      transform: scale(1.15);
+      color: #0f172a;
     }
     .active-frame {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 320px;
-      height: 70px;
-      border: 4px solid #1e293b;
-      background: rgba(255,255,255,0.1);
-      border-radius: 12px;
+      width: 340px;
+      height: 75px;
+      border: 4px solid #0f172a;
+      background: rgba(255,255,255,0.3);
+      border-radius: 16px;
       z-index: 1002;
-      box-shadow: 0 0 25px rgba(0,0,0,0.1);
     }
 
-    /* Modals */
     .overlay{position:fixed;inset:0;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(10px);}
-    .box{background:#fff;color:#1e293b;padding:40px;border-radius:24px;text-align:center;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.3);}
-    .btn{background:#1e293b;color:#fff;border:none;padding:15px 35px;border-radius:10px;font-weight:700;cursor:pointer;font-size:1.1rem;width:100%;margin-top:20px;transition:0.2s;}
-    .btn:hover{background:#334155;transform:translateY(-2px);}
+    .box{background:#fff;color:#1e293b;padding:40px;border-radius:24px;text-align:center;max-width:380px;}
+    .btn{background:#0f172a;color:#fff;border:none;padding:15px 35px;border-radius:10px;font-weight:700;cursor:pointer;font-size:1.1rem;width:100%;margin-top:20px;transition:0.2s;}
+    .btn:hover{background:#334155;}
   </style>
 </head>
 <body>
@@ -95,8 +90,8 @@
   <div id="overlayStart" class="overlay">
     <div class="box">
       <h1 style="margin-top:0">USA 100 Speedrun</h1>
-      <p>Identify 100 cities accurately.<br>Survival Threshold: <b>100km</b></p>
-      <button id="startBtn" class="btn">Begin Mission</button>
+      <p>Locate 100 major cities.<br>Distance threshold: <b>100km</b></p>
+      <button id="startBtn" class="btn">Start Run</button>
     </div>
   </div>
 
@@ -104,17 +99,18 @@
     <div class="box">
       <h2 id="resTitle">Run Finished</h2>
       <div id="stats" style="margin:15px 0;line-height:1.6"></div>
-      <button onclick="location.reload()" class="btn">Restart Run</button>
+      <button onclick="location.reload()" class="btn">New Run</button>
     </div>
   </div>
 
   <script>
+    // 篩選後的名單，移除容易重疊的城市
     const CITIES = [
-      {name:"Los Angeles",coords:[34.05,-118.24]},{name:"San Francisco",coords:[37.77,-122.41]},{name:"San Diego",coords:[32.71,-117.16]},{name:"San Jose",coords:[37.33,-121.88]},{name:"Sacramento",coords:[38.58,-121.49]},{name:"Fresno",coords:[36.74,-119.77]},{name:"Oakland",coords:[37.80,-122.27]},{name:"Bakersfield",coords:[35.37,-119.01]},{name:"Anaheim",coords:[33.83,-117.91]},{name:"Riverside",coords:[33.95,-117.37]},{name:"Irvine",coords:[33.68,-117.82]},{name:"Long Beach",coords:[33.77,-118.19]},
-      {name:"Houston",coords:[29.76,-95.36]},{name:"San Antonio",coords:[29.42,-98.49]},{name:"Dallas",coords:[32.77,-96.79]},{name:"Austin",coords:[30.26,-97.74]},{name:"Fort Worth",coords:[32.75,-97.33]},{name:"El Paso",coords:[31.76,-106.48]},{name:"Arlington",coords:[32.73,-97.10]},{name:"Corpus Christi",coords:[27.80,-97.39]},{name:"Plano",coords:[33.01,-96.69]},{name:"Laredo",coords:[27.50,-99.50]},
+      {name:"Los Angeles",coords:[34.05,-118.24]},{name:"San Francisco",coords:[37.77,-122.41]},{name:"San Diego",coords:[32.71,-117.16]},{name:"San Jose",coords:[37.33,-121.88]},{name:"Sacramento",coords:[38.58,-121.49]},{name:"Fresno",coords:[36.74,-119.77]},{name:"Oakland",coords:[37.80,-122.27]},{name:"Bakersfield",coords:[35.37,-119.01]},{name:"Riverside",coords:[33.95,-117.37]},{name:"Long Beach",coords:[33.77,-118.19]},
+      {name:"Houston",coords:[29.76,-95.36]},{name:"San Antonio",coords:[29.42,-98.49]},{name:"Dallas",coords:[32.77,-96.79]},{name:"Austin",coords:[30.26,-97.74]},{name:"Fort Worth",coords:[32.75,-97.33]},{name:"El Paso",coords:[31.76,-106.48]},{name:"Corpus Christi",coords:[27.80,-97.39]},{name:"Plano",coords:[33.01,-96.69]},{name:"Laredo",coords:[27.50,-99.50]},{name:"Lubbock",coords:[33.57,-101.85]},
       {name:"Jacksonville",coords:[30.33,-81.65]},{name:"Miami",coords:[25.76,-80.19]},{name:"Tampa",coords:[27.95,-82.45]},{name:"Orlando",coords:[28.53,-81.37]},{name:"St. Petersburg",coords:[27.76,-82.64]},{name:"Tallahassee",coords:[30.43,-84.28]},
       {name:"New York City",coords:[40.71,-74.00]},{name:"Buffalo",coords:[42.88,-78.87]},{name:"Rochester",coords:[43.15,-77.61]},{name:"Albany",coords:[42.65,-73.75]},
-      {name:"Chicago",coords:[41.87,-87.62]},{name:"Phoenix",coords:[33.44,-112.07]},{name:"Philadelphia",coords:[39.95,-75.16]},{name:"Seattle",coords:[47.60,-122.33]},{name:"Denver",coords:[39.73,-104.99]},{name:"Boston",coords:[42.36,-71.05]},{name:"Nashville",coords:[36.16,-86.78]},{name:"Atlanta",coords:[33.74,-84.38]},{name:"Detroit",coords:[42.33,-83.04]},{name:"Portland (OR)",coords:[45.51,-122.67]},{name:"Oklahoma City",coords:[35.46,-97.51]},{name:"Las Vegas",coords:[36.16,-115.13]},{name:"Milwaukee",coords:[43.03,-87.90]},{name:"Albuquerque",coords:[35.08,-106.65]},{name:"Minneapolis",coords:[44.97,-93.26]},{name:"New Orleans",coords:[29.95,-90.07]},{name:"Wichita",coords:[37.68,-97.33]},{name:"Cleveland",coords:[41.49,-81.69]},{name:"Honolulu",coords:[21.30,-157.85]},{name:"Anchorage",coords:[61.21,-149.90]},{name:"Newark",coords:[40.73,-74.17]},{name:"Baltimore",coords:[39.29,-76.61]},{name:"Charlotte",coords:[35.22,-80.84]},{name:"Indianapolis",coords:[39.76,-86.15]},{name:"Columbus",coords:[39.96,-82.99]},{name:"Virginia Beach",coords:[36.85,-75.97]},{name:"Omaha",coords:[41.25,-95.93]},{name:"Salt Lake City",coords:[40.76,-111.89]},{name:"Birmingham",coords:[33.51,-86.81]},{name:"Little Rock",coords:[34.74,-92.28]},{name:"Bridgeport",coords:[41.17,-73.18]},{name:"Wilmington",coords:[39.74,-75.54]},{name:"Boise",coords:[43.61,-116.20]},{name:"Des Moines",coords:[41.58,-93.60]},{name:"Louisville",coords:[38.25,-85.75]},{name:"Portland (ME)",coords:[43.65,-70.25]},{name:"Jackson",coords:[32.29,-90.18]},{name:"Kansas City",coords:[39.09,-94.57]},{name:"Billings",coords:[45.78,-108.50]},{name:"Manchester",coords:[42.99,-71.46]},{name:"Fargo",coords:[46.87,-96.78]},{name:"Providence",coords:[41.82,-71.41]},{name:"Charleston (SC)",coords:[32.77,-79.93]},{name:"Sioux Falls",coords:[43.54,-96.72]},{name:"Burlington",coords:[44.47,-73.21]},{name:"Charleston (WV)",coords:[38.34,-81.63]},{name:"Cheyenne",coords:[41.13,-104.80]},{name:"Washington DC",coords:[38.90,-77.03]},{name:"Tucson",coords:[32.22,-110.92]},{name:"Mesa",coords:[33.41,-111.83]},{name:"Colorado Springs",coords:[38.83,-104.82]},{name:"Aurora",coords:[39.72,-104.83]},{name:"St. Louis",coords:[38.62,-90.19]},{name:"Pittsburgh",coords:[40.44,-79.99]},{name:"Cincinnati",coords:[39.10,-84.51]},{name:"Raleigh",coords:[35.77,-78.63]},{name:"Greensboro",coords:[36.07,-79.79]},{name:"Memphis",coords:[35.14,-90.04]},{name:"Knoxville",coords:[35.96,-83.92]},{name:"Tulsa",coords:[36.15,-95.99]},{name:"Madison",coords:[43.07,-89.40]},{name:"Spokane",coords:[47.65,-117.42]},{name:"Grand Rapids",coords:[42.96,-85.66]},{name:"Richmond",coords:[37.54,-77.43]},{name:"Savannah",coords:[32.08,-81.09]},{name:"Mobile",coords:[30.69,-88.03]},{name:"Shreveport",coords:[32.52,-93.75]}
+      {name:"Chicago",coords:[41.87,-87.62]},{name:"Phoenix",coords:[33.44,-112.07]},{name:"Philadelphia",coords:[39.95,-75.16]},{name:"Seattle",coords:[47.60,-122.33]},{name:"Denver",coords:[39.73,-104.99]},{name:"Boston",coords:[42.36,-71.05]},{name:"Nashville",coords:[36.16,-86.78]},{name:"Atlanta",coords:[33.74,-84.38]},{name:"Detroit",coords:[42.33,-83.04]},{name:"Portland (OR)",coords:[45.51,-122.67]},{name:"Oklahoma City",coords:[35.46,-97.51]},{name:"Las Vegas",coords:[36.16,-115.13]},{name:"Milwaukee",coords:[43.03,-87.90]},{name:"Albuquerque",coords:[35.08,-106.65]},{name:"Minneapolis",coords:[44.97,-93.26]},{name:"New Orleans",coords:[29.95,-90.07]},{name:"Wichita",coords:[37.68,-97.33]},{name:"Cleveland",coords:[41.49,-81.69]},{name:"Honolulu",coords:[21.30,-157.85]},{name:"Anchorage",coords:[61.21,-149.90]},{name:"Newark",coords:[40.73,-74.17]},{name:"Baltimore",coords:[39.29,-76.61]},{name:"Charlotte",coords:[35.22,-80.84]},{name:"Indianapolis",coords:[39.76,-86.15]},{name:"Columbus",coords:[39.96,-82.99]},{name:"Virginia Beach",coords:[36.85,-75.97]},{name:"Omaha",coords:[41.25,-95.93]},{name:"Salt Lake City",coords:[40.76,-111.89]},{name:"Birmingham",coords:[33.51,-86.81]},{name:"Little Rock",coords:[34.74,-92.28]},{name:"Bridgeport",coords:[41.17,-73.18]},{name:"Wilmington",coords:[39.74,-75.54]},{name:"Boise",coords:[43.61,-116.20]},{name:"Des Moines",coords:[41.58,-93.60]},{name:"Louisville",coords:[38.25,-85.75]},{name:"Portland (ME)",coords:[43.65,-70.25]},{name:"Jackson",coords:[32.29,-90.18]},{name:"Kansas City",coords:[39.09,-94.57]},{name:"Billings",coords:[45.78,-108.50]},{name:"Manchester",coords:[42.99,-71.46]},{name:"Fargo",coords:[46.87,-96.78]},{name:"Providence",coords:[41.82,-71.41]},{name:"Charleston (SC)",coords:[32.77,-79.93]},{name:"Sioux Falls",coords:[43.54,-96.72]},{name:"Burlington",coords:[44.47,-73.21]},{name:"Charleston (WV)",coords:[38.34,-81.63]},{name:"Cheyenne",coords:[41.13,-104.80]},{name:"Washington DC",coords:[38.90,-77.03]},{name:"Tucson",coords:[32.22,-110.92]},{name:"Colorado Springs",coords:[38.83,-104.82]},{name:"St. Louis",coords:[38.62,-90.19]},{name:"Pittsburgh",coords:[40.44,-79.99]},{name:"Cincinnati",coords:[39.10,-84.51]},{name:"Raleigh",coords:[35.77,-78.63]},{name:"Greensboro",coords:[36.07,-79.79]},{name:"Memphis",coords:[35.14,-90.04]},{name:"Knoxville",coords:[35.96,-83.92]},{name:"Tulsa",coords:[36.15,-95.99]},{name:"Madison",coords:[43.07,-89.40]},{name:"Spokane",coords:[47.65,-117.42]},{name:"Grand Rapids",coords:[42.96,-85.66]},{name:"Richmond",coords:[37.54,-77.43]},{name:"Savannah",coords:[32.08,-81.09]},{name:"Mobile",coords:[30.69,-88.03]},{name:"Shreveport",coords:[32.52,-93.75]},{name:"Salem",coords:[44.94,-123.03]},{name:"Santa Fe",coords:[35.68,-105.93]},{name:"Montgomery",coords:[32.36,-86.30]},{name:"Lincoln",coords:[40.81,-96.70]},{name:"Topeka",coords:[39.04,-95.67]}
     ].sort(()=>Math.random()-0.5);
 
     let idx=0, score=0, startTime, timer, started=false, answered=false, markers=[], circles=[], gameOver=false, deathCity="";
@@ -143,11 +139,8 @@
     };
 
     function updateConveyor() {
-      // CARD_WIDTH = 300px. 
-      // 為了對齊中線，位移量 = -(當前索引 * 300) - 150 (半個卡片寬)
-      const offset = -(idx * 300) - 150;
+      const offset = -(idx * 320) - 160;
       belt.style.transform = `translateX(${offset}px)`;
-      
       const cards = document.querySelectorAll('.city-card');
       cards.forEach((card, i) => {
         card.classList.remove('active');
@@ -176,7 +169,8 @@
         s.textContent = "OUT"; s.className = "info-value status-dead";
       }
       
-      map.flyTo(city.coords, 7, {duration: 0.5});
+      // 改為更深的縮放，避免鄰近城市混淆
+      map.flyTo(city.coords, 8, {duration: 0.5});
       
       setTimeout(()=>{
         markers.forEach(x=>map.removeLayer(x)); markers=[];
@@ -192,8 +186,8 @@
 
     function end(){
       clearInterval(timer);
-      document.getElementById('resTitle').textContent = gameOver ? "Run Terminated" : "Speedrun Champion";
-      document.getElementById('stats').innerHTML = `Final Score: <b>${score}</b><br>Progress: <b>${idx}/100</b><br>Time: <b>${document.getElementById('time').textContent}</b>${gameOver?`<br><br>Failed at: <span style="color:#ef4444">${deathCity}</span>`:""}`;
+      document.getElementById('resTitle').textContent = gameOver ? "Run Failed" : "Speedrun Champion";
+      document.getElementById('stats').innerHTML = `Score: <b>${score}</b><br>Progress: <b>${idx}/100</b><br>Time: <b>${document.getElementById('time').textContent}</b>${gameOver?`<br><br>Eliminated at: <span style="color:#ef4444">${deathCity}</span>`:""}`;
       document.getElementById('endModal').style.display='flex';
     }
   </script>
