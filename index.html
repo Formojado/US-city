@@ -132,4 +132,45 @@
 
     map.on('click', e=>{
       if(!started||answered)return; answered=true;
-      const city=CITIES[idx], dist=haversine([e.latlng
+      const city=CITIES[idx], dist=haversine([e.latlng.lat,e.latlng.lng], city.coords);
+      
+      const clickMarker = L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:'#3b82f6',fillOpacity:1}).addTo(map);
+      const targetCircle = L.circle(city.coords,{radius:100000,color:'#22c55e',weight:2,fillOpacity:0.1}).addTo(map);
+      const targetMarker = L.marker(city.coords).addTo(map).bindPopup(`<b>${city.name}</b><br>${dist.toFixed(1)} km`).openPopup();
+      
+      markers.push(clickMarker, targetMarker);
+      circles.push(targetCircle);
+
+      if(dist<=100){
+        score += Math.max(10, Math.round(100 - dist));
+        document.getElementById('score').textContent = score;
+      } else if(!gameOver){
+        gameOver = true; deathCity = city.name;
+        const s = document.getElementById('aliveStatus');
+        s.textContent = "OUT"; s.className = "info-value status-dead";
+      }
+      
+      map.flyTo(city.coords, 7, {duration: 0.6});
+      
+      setTimeout(()=>{
+        markers.forEach(x=>map.removeLayer(x)); markers=[];
+        circles.forEach(x=>map.removeLayer(x)); circles=[];
+        idx++;
+        if(idx < CITIES.length) {
+          updateQueue();
+          answered = false;
+          map.flyTo([37.8, -96], 4, {duration: 0.8});
+        } else end();
+      }, 1500);
+    });
+
+    function end(){
+      clearInterval(timer);
+      document.getElementById('cityQueue').style.display='none';
+      document.getElementById('resTitle').textContent = gameOver ? "Run Eliminated" : "WR Legend!";
+      document.getElementById('stats').innerHTML = `Final Score: <b>${score}</b><br>Progress: <b>${idx}/100</b><br>Total Time: <b>${document.getElementById('time').textContent}</b>${gameOver?`<br><br>Failed at: <span style="color:#ef4444">${deathCity}</span>`:""}`;
+      document.getElementById('endModal').style.display='flex';
+    }
+  </script>
+</body>
+</html>
