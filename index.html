@@ -7,24 +7,24 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    html,body{height:100%;margin:0;font-family:'Inter', 'Segoe UI', sans-serif;background:#020617;color:#f1f5f9;overflow:hidden;}
-    #map{height:100vh;width:100vw;z-index: 1; filter: brightness(0.8) contrast(1.1);}
+    html,body{height:100%;margin:0;font-family:'Inter', 'Segoe UI', sans-serif;background:#f8fafc;color:#0f172a;overflow:hidden;}
+    #map{height:100vh;width:100vw;z-index: 1;} /* 恢復明亮 */
 
-    /* Stats Bar */
-    .info-bar{position:absolute;top:20px;right:20px;background:rgba(15, 23, 42, 0.9);padding:15px 25px;border-radius:12px;display:flex;flex-direction:column;gap:15px;z-index:900;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.5);}
-    .info-item{display:flex;justify-content:space-between;align-items:center;min-width:140px;}
-    .info-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;opacity:0.6;}
-    .info-value{font-size:1.2rem;font-weight:800;font-variant-numeric: tabular-nums;}
-    .status-alive{color:#4ade80;} .status-dead{color:#f87171;animation:blink 0.8s infinite;}
+    /* Stats Bar - 改為更精緻的深色板 */
+    .info-bar{position:absolute;top:20px;right:20px;background:rgba(15, 23, 42, 0.85);padding:15px;border-radius:12px;display:flex;flex-direction:column;gap:10px;z-index:900;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);color:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.2);}
+    .info-item{display:flex;justify-content:space-between;align-items:center;min-width:130px; gap: 15px;}
+    .info-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;opacity:0.7;}
+    .info-value{font-size:1.1rem;font-weight:800;font-variant-numeric: tabular-nums;}
+    .status-alive{color:#4ade80;} .status-dead{color:#f87171;}
 
-    /* Conveyor Belt Queue */
+    /* Conveyor Belt System */
     .conveyor-viewport {
       position: absolute;
-      top: 40px;
+      top: 30px;
       left: 50%;
       transform: translateX(-50%);
       width: 100%;
-      height: 120px;
+      height: 140px;
       z-index: 1001;
       overflow: hidden;
       pointer-events: none;
@@ -33,47 +33,48 @@
       display: flex;
       align-items: center;
       position: absolute;
-      left: 50%;
-      transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+      left: 50%; /* 基準點在螢幕中線 */
+      transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
       will-change: transform;
+      height: 100%;
     }
     .city-card {
-      min-width: 250px;
+      min-width: 300px; /* 固定寬度便於精確計算位移 */
       text-align: center;
-      padding: 10px;
       transition: all 0.5s ease;
-      opacity: 0.3;
-      transform: scale(0.7);
-      font-size: 1.5rem;
+      opacity: 0.5; /* 提高非當前題目的亮度 */
+      transform: scale(0.85);
+      font-size: 1.6rem;
       font-weight: 700;
-      color: #94a3b8;
+      color: #334155;
+      filter: blur(1px);
     }
     .city-card.active {
       opacity: 1;
-      transform: scale(1.2);
-      color: #ffffff;
-      font-size: 2.2rem;
-      text-shadow: 0 0 20px rgba(255,255,255,0.4);
+      transform: scale(1.1);
+      color: #1e293b;
+      filter: blur(0);
+      text-shadow: 0 0 15px rgba(255,255,255,0.8);
     }
     .active-frame {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 300px;
-      height: 80px;
-      border: 3px solid #fff;
-      border-radius: 15px;
+      width: 320px;
+      height: 70px;
+      border: 4px solid #1e293b;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
       z-index: 1002;
-      box-shadow: 0 0 30px rgba(255,255,255,0.2);
+      box-shadow: 0 0 25px rgba(0,0,0,0.1);
     }
 
     /* Modals */
-    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.98);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(15px);}
-    .box{background:#fff;color:#1e293b;padding:40px;border-radius:24px;text-align:center;max-width:400px;}
-    .btn{background:#2563eb;color:#fff;border:none;padding:15px 35px;border-radius:10px;font-weight:700;cursor:pointer;font-size:1.1rem;width:100%;margin-top:20px;}
-    
-    @keyframes blink{50%{opacity:0.2;}}
+    .overlay{position:fixed;inset:0;background:rgba(15,23,42,0.9);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(10px);}
+    .box{background:#fff;color:#1e293b;padding:40px;border-radius:24px;text-align:center;max-width:380px;box-shadow:0 20px 40px rgba(0,0,0,0.3);}
+    .btn{background:#1e293b;color:#fff;border:none;padding:15px 35px;border-radius:10px;font-weight:700;cursor:pointer;font-size:1.1rem;width:100%;margin-top:20px;transition:0.2s;}
+    .btn:hover{background:#334155;transform:translateY(-2px);}
   </style>
 </head>
 <body>
@@ -93,17 +94,17 @@
 
   <div id="overlayStart" class="overlay">
     <div class="box">
-      <h1>USA 100 Speedrun</h1>
-      <p>Identify 100 cities as fast as possible.<br>Stay within <b>100km</b> to survive.</p>
-      <button id="startBtn" class="btn">Start Run</button>
+      <h1 style="margin-top:0">USA 100 Speedrun</h1>
+      <p>Identify 100 cities accurately.<br>Survival Threshold: <b>100km</b></p>
+      <button id="startBtn" class="btn">Begin Mission</button>
     </div>
   </div>
 
   <div id="endModal" style="display:none" class="overlay">
     <div class="box">
-      <h2 id="resTitle">Run Complete</h2>
-      <div id="stats" style="margin:20px 0;line-height:1.8"></div>
-      <button onclick="location.reload()" class="btn">Try Again</button>
+      <h2 id="resTitle">Run Finished</h2>
+      <div id="stats" style="margin:15px 0;line-height:1.6"></div>
+      <button onclick="location.reload()" class="btn">Restart Run</button>
     </div>
   </div>
 
@@ -117,15 +118,13 @@
     ].sort(()=>Math.random()-0.5);
 
     let idx=0, score=0, startTime, timer, started=false, answered=false, markers=[], circles=[], gameOver=false, deathCity="";
-    const map = L.map('map',{zoomControl:false}).setView([37.8, -96], 4);
+    const map = L.map('map',{zoomControl:false, attributionControl: false}).setView([37.8, -96], 4);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png').addTo(map);
 
-    // Initialize Belt
     const belt = document.getElementById('belt');
     CITIES.forEach((c, i) => {
       const el = document.createElement('div');
       el.className = 'city-card';
-      el.id = `city-${i}`;
       el.textContent = c.name;
       belt.appendChild(el);
     });
@@ -144,11 +143,13 @@
     };
 
     function updateConveyor() {
-      // Each card is 250px wide. We shift the belt to keep active card in center.
-      const offset = - (idx * 250) - 125; 
+      // CARD_WIDTH = 300px. 
+      // 為了對齊中線，位移量 = -(當前索引 * 300) - 150 (半個卡片寬)
+      const offset = -(idx * 300) - 150;
       belt.style.transform = `translateX(${offset}px)`;
       
-      document.querySelectorAll('.city-card').forEach((card, i) => {
+      const cards = document.querySelectorAll('.city-card');
+      cards.forEach((card, i) => {
         card.classList.remove('active');
         if(i === idx) card.classList.add('active');
       });
@@ -159,8 +160,8 @@
       if(!started||answered)return; answered=true;
       const city=CITIES[idx], dist=haversine([e.latlng.lat,e.latlng.lng], city.coords);
       
-      const clickMarker = L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:'#3b82f6',fillOpacity:1}).addTo(map);
-      const targetCircle = L.circle(city.coords,{radius:100000,color:'#22c55e',weight:2,fillOpacity:0.1}).addTo(map);
+      const clickMarker = L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:'#3b82f6',fillOpacity:0.8, weight:2}).addTo(map);
+      const targetCircle = L.circle(city.coords,{radius:100000,color:'#22c55e',weight:2,fillOpacity:0.15}).addTo(map);
       const targetMarker = L.marker(city.coords).addTo(map).bindPopup(`<b>${city.name}</b><br>${dist.toFixed(1)} km`).openPopup();
       
       markers.push(clickMarker, targetMarker);
@@ -191,8 +192,8 @@
 
     function end(){
       clearInterval(timer);
-      document.getElementById('resTitle').textContent = gameOver ? "Run Terminated" : "Speedrun Legend";
-      document.getElementById('stats').innerHTML = `Score: <b>${score}</b><br>Accuracy: <b>${idx}/100</b><br>Time: <b>${document.getElementById('time').textContent}</b>${gameOver?`<br><br>Failed at: <span style="color:#ef4444">${deathCity}</span>`:""}`;
+      document.getElementById('resTitle').textContent = gameOver ? "Run Terminated" : "Speedrun Champion";
+      document.getElementById('stats').innerHTML = `Final Score: <b>${score}</b><br>Progress: <b>${idx}/100</b><br>Time: <b>${document.getElementById('time').textContent}</b>${gameOver?`<br><br>Failed at: <span style="color:#ef4444">${deathCity}</span>`:""}`;
       document.getElementById('endModal').style.display='flex';
     }
   </script>
