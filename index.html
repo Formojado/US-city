@@ -3,52 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>USA 100 Cities Survival</title>
+  <title>USA 100 Speedrun</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <style>
-    html,body{height:100%;margin:0;font-family:'Segoe UI', sans-serif;background:#0b1120;color:#f1f5f9;overflow:hidden;}
+    html,body{height:100%;margin:0;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:#0b1120;color:#f1f5f9;overflow:hidden;}
     #map{height:100vh;width:100vw;z-index: 1;}
-    .info-bar{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:rgba(15, 23, 42, 0.9);padding:12px 30px;border-radius:20px;display:flex;gap:30px;z-index:900;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 40px rgba(0,0,0,0.5);}
-    .info-item{display:flex;flex-direction:column;align-items:center;min-width:80px;}
-    .info-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.2px;opacity:0.6;margin-bottom:2px;}
-    .info-value{font-size:1.4rem;font-weight:800;}
+
+    /* Info Bar Stats */
+    .info-bar{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:rgba(15, 23, 42, 0.9);padding:10px 25px;border-radius:15px;display:flex;gap:25px;z-index:900;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+    .info-item{display:flex;flex-direction:column;align-items:center;min-width:70px;}
+    .info-label{font-size:0.65rem;text-transform:uppercase;letter-spacing:1px;opacity:0.6;}
+    .info-value{font-size:1.2rem;font-weight:800;font-variant-numeric: tabular-nums;}
     .status-alive{color:#4ade80;} .status-dead{color:#f87171;animation:blink 0.8s infinite;}
-    .city-title{position:absolute;top:120px;left:50%;transform:translateX(-50%);z-index:1001;font-size:3rem;font-weight:900;text-shadow:0 0 20px #000, 3px 3px 0px #1d4ed8;pointer-events:none;text-align:center;width:100%;}
-    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.95);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(15px);}
-    .box{background:#fff;color:#1e293b;padding:50px;border-radius:30px;text-align:center;max-width:500px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);}
-    .btn{background:#1d4ed8;color:#fff;border:none;padding:18px 40px;border-radius:15px;font-weight:700;cursor:pointer;font-size:1.2rem;transition:0.2s;width:100%;margin-top:20px;}
-    .btn:hover{background:#1e40af;transform:scale(1.02);}
-    @keyframes blink{50%{opacity:0.3;}}
+
+    /* Speedrun Queue UI */
+    .queue-container {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1001;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+      width: 100%;
+      justify-content: center;
+    }
+    .queue-item {
+      padding: 8px 20px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      opacity: 0.5;
+      transform: scale(0.85);
+      white-space: nowrap;
+    }
+    .queue-item.active {
+      opacity: 1;
+      transform: scale(1.1);
+      background: #1d4ed8;
+      box-shadow: 0 0 25px rgba(29, 78, 216, 0.6);
+      font-size: 1.5rem;
+      font-weight: 900;
+      border: none;
+    }
+    .queue-item.next { opacity: 0.8; transform: scale(0.95); font-weight: 600;}
+
+    /* Modals */
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.96);display:flex;align-items:center;justify-content:center;z-index:2000;backdrop-filter:blur(20px);}
+    .box{background:#fff;color:#1e293b;padding:40px;border-radius:25px;text-align:center;max-width:400px;box-shadow:0 25px 50px rgba(0,0,0,0.5);}
+    .btn{background:#1d4ed8;color:#fff;border:none;padding:15px 35px;border-radius:12px;font-weight:700;cursor:pointer;font-size:1.1rem;transition:0.2s;width:100%;margin-top:20px;}
+    .btn:hover{background:#1e40af;transform:translateY(-2px);}
+
+    @keyframes blink{50%{opacity:0.2;}}
   </style>
 </head>
 <body>
   <div id="map"></div>
+
   <div class="info-bar">
     <div class="info-item"><span class="info-label">Time</span><span id="time" class="info-value">00:00</span></div>
     <div class="info-item"><span class="info-label">Progress</span><span class="info-value"><span id="progress">0</span>/100</span></div>
     <div class="info-item"><span class="info-label">Score</span><span id="score" class="info-value">0</span></div>
     <div class="info-item" id="statusBox" style="display:none;"><span class="info-label">Status</span><span id="aliveStatus" class="info-value status-alive">ALIVE</span></div>
   </div>
-  <div id="overlayStart" class="overlay"><div class="box"><h1>🇺🇸 USA 100 Expedition</h1><p>挑戰找出全美 50 州的主要城市！<br>點擊必須在目標 <b>100km</b> 內才算生存。</p><button id="startBtn" class="btn">Start Mission</button></div></div>
-  <div class="city-title" id="cityTitle" style="display:none"></div>
-  <div id="endModal" style="display:none" class="overlay"><div class="box"><h2 id="resTitle">Route Ended</h2><div id="stats" style="margin:20px 0;font-size:1.2rem;"></div><button onclick="location.reload()" class="btn">Play Again</button></div></div>
+
+  <div class="queue-container" id="cityQueue">
+    </div>
+
+  <div id="overlayStart" class="overlay">
+    <div class="box">
+      <h1 style="margin-top:0">USA 100 Speedrun</h1>
+      <p>Locate 100 major cities across all 50 states.<br>Accuracy required: <b>100km</b></p>
+      <button id="startBtn" class="btn">Start Speedrun</button>
+    </div>
+  </div>
+
+  <div id="endModal" style="display:none" class="overlay">
+    <div class="box">
+      <h2 id="resTitle">Run Finished</h2>
+      <div id="stats" style="margin:20px 0;font-size:1.1rem;line-height:1.6"></div>
+      <button onclick="location.reload()" class="btn">New Run</button>
+    </div>
+  </div>
 
   <script>
     const CITIES = [
-      // California (12)
       {name:"Los Angeles, CA",coords:[34.05,-118.24]},{name:"San Francisco, CA",coords:[37.77,-122.41]},{name:"San Diego, CA",coords:[32.71,-117.16]},{name:"San Jose, CA",coords:[37.33,-121.88]},{name:"Sacramento, CA",coords:[38.58,-121.49]},{name:"Fresno, CA",coords:[36.74,-119.77]},{name:"Oakland, CA",coords:[37.80,-122.27]},{name:"Bakersfield, CA",coords:[35.37,-119.01]},{name:"Anaheim, CA",coords:[33.83,-117.91]},{name:"Riverside, CA",coords:[33.95,-117.37]},{name:"Irvine, CA",coords:[33.68,-117.82]},{name:"Long Beach, CA",coords:[33.77,-118.19]},
-      // Texas (10)
       {name:"Houston, TX",coords:[29.76,-95.36]},{name:"San Antonio, TX",coords:[29.42,-98.49]},{name:"Dallas, TX",coords:[32.77,-96.79]},{name:"Austin, TX",coords:[30.26,-97.74]},{name:"Fort Worth, TX",coords:[32.75,-97.33]},{name:"El Paso, TX",coords:[31.76,-106.48]},{name:"Arlington, TX",coords:[32.73,-97.10]},{name:"Corpus Christi, TX",coords:[27.80,-97.39]},{name:"Plano, TX",coords:[33.01,-96.69]},{name:"Laredo, TX",coords:[27.50,-99.50]},
-      // Florida (6)
       {name:"Jacksonville, FL",coords:[30.33,-81.65]},{name:"Miami, FL",coords:[25.76,-80.19]},{name:"Tampa, FL",coords:[27.95,-82.45]},{name:"Orlando, FL",coords:[28.53,-81.37]},{name:"St. Petersburg, FL",coords:[27.76,-82.64]},{name:"Tallahassee, FL",coords:[30.43,-84.28]},
-      // New York (4)
       {name:"New York City, NY",coords:[40.71,-74.00]},{name:"Buffalo, NY",coords:[42.88,-78.87]},{name:"Rochester, NY",coords:[43.15,-77.61]},{name:"Albany, NY",coords:[42.65,-73.75]},
-      // Others (Largest in each other state)
-      {name:"Chicago, IL",coords:[41.87,-87.62]},{name:"Phoenix, AZ",coords:[33.44,-112.07]},{name:"Philadelphia, PA",coords:[39.95,-75.16]},{name:"Seattle, WA",coords:[47.60,-122.33]},{name:"Denver, CO",coords:[39.73,-104.99]},{name:"Boston, MA",coords:[42.36,-71.05]},{name:"Nashville, TN",coords:[36.16,-86.78]},{name:"Atlanta, GA",coords:[33.74,-84.38]},{name:"Detroit, MI",coords:[42.33,-83.04]},{name:"Portland, OR",coords:[45.51,-122.67]},{name:"Oklahoma City, OK",coords:[35.46,-97.51]},{name:"Las Vegas, NV",coords:[36.16,-115.13]},{name:"Milwaukee, WI",coords:[43.03,-87.90]},{name:"Albuquerque, NM",coords:[35.08,-106.65]},{name:"Minneapolis, MN",coords:[44.97,-93.26]},{name:"New Orleans, LA",coords:[29.95,-90.07]},{name:"Wichita, KS",coords:[37.68,-97.33]},{name:"Cleveland, OH",coords:[41.49,-81.69]},{name:"Honolulu, HI",coords:[21.30,-157.85]},{name:"Anchorage, AK",coords:[61.21,-149.90]},{name:"Newark, NJ",coords:[40.73,-74.17]},{name:"Baltimore, MD",coords:[39.29,-76.61]},{name:"Charlotte, NC",coords:[35.22,-80.84]},{name:"Indianapolis, IN",coords:[39.76,-86.15]},{name:"Columbus, OH",coords:[39.96,-82.99]},{name:"Virginia Beach, VA",coords:[36.85,-75.97]},{name:"Omaha, NE",coords:[41.25,-95.93]},{name:"Salt Lake City, UT",coords:[40.76,-111.89]},{name:"Birmingham, AL",coords:[33.51,-86.81]},{name:"Little Rock, AR",coords:[34.74,-92.28]},{name:"Bridgeport, CT",coords:[41.17,-73.18]},{name:"Wilmington, DE",coords:[39.74,-75.54]},{name:"Boise, ID",coords:[43.61,-116.20]},{name:"Des Moines, IA",coords:[41.58,-93.60]},{name:"Louisville, KY",coords:[38.25,-85.75]},{name:"Portland, ME",coords:[43.65,-70.25]},{name:"Jackson, MS",coords:[32.29,-90.18]},{name:"Kansas City, MO",coords:[39.09,-94.57]},{name:"Billings, MT",coords:[45.78,-108.50]},{name:"Manchester, NH",coords:[42.99,-71.46]},{name:"Fargo, ND",coords:[46.87,-96.78]},{name:"Providence, RI",coords:[41.82,-71.41]},{name:"Charleston, SC",coords:[32.77,-79.93]},{name:"Sioux Falls, SD",coords:[43.54,-96.72]},{name:"Burlington, VT",coords:[44.47,-73.21]},{name:"Charleston, WV",coords:[38.34,-81.63]},{name:"Cheyenne, WY",coords:[41.13,-104.80]},{name:"Washington, DC",coords:[38.90,-77.03]},
-      // Extra Large cities to fill 100
-      {name:"Tucson, AZ",coords:[32.22,-110.92]},{name:"Mesa, AZ",coords:[33.41,-111.83]},{name:"Colorado Springs, CO",coords:[38.83,-104.82]},{name:"Aurora, CO",coords:[39.72,-104.83]},{name:"St. Louis, MO",coords:[38.62,-90.19]},{name:"Pittsburgh, PA",coords:[40.44,-79.99]},{name:"Cincinnati, OH",coords:[39.10,-84.51]},{name:"Raleigh, NC",coords:[35.77,-78.63]},{name:"Greensboro, NC",coords:[36.07,-79.79]},{name:"Memphis, TN",coords:[35.14,-90.04]},{name:"Knoxville, TN",coords:[35.96,-83.92]},{name:"Tulsa, OK",coords:[36.15,-95.99]},{name:"Madison, WI",coords:[43.07,-89.40]},{name:"Spokane, WA",coords:[47.65,-117.42]},{name:"Grand Rapids, MI",coords:[42.96,-85.66]},{name:"Des Moines, IA",coords:[41.58,-93.60]},{name:"Richmond, VA",coords:[37.54,-77.43]},{name:"Savannah, GA",coords:[32.08,-81.09]},{name:"Mobile, AL",coords:[30.69,-88.03]},{name:"Shreveport, LA",coords:[32.52,-93.75]}
-    ].sort(()=>Math.random()-0.5).slice(0,100);
+      {name:"Chicago, IL",coords:[41.87,-87.62]},{name:"Phoenix, AZ",coords:[33.44,-112.07]},{name:"Philadelphia, PA",coords:[39.95,-75.16]},{name:"Seattle, WA",coords:[47.60,-122.33]},{name:"Denver, CO",coords:[39.73,-104.99]},{name:"Boston, MA",coords:[42.36,-71.05]},{name:"Nashville, TN",coords:[36.16,-86.78]},{name:"Atlanta, GA",coords:[33.74,-84.38]},{name:"Detroit, MI",coords:[42.33,-83.04]},{name:"Portland, OR",coords:[45.51,-122.67]},{name:"Oklahoma City, OK",coords:[35.46,-97.51]},{name:"Las Vegas, NV",coords:[36.16,-115.13]},{name:"Milwaukee, WI",coords:[43.03,-87.90]},{name:"Albuquerque, NM",coords:[35.08,-106.65]},{name:"Minneapolis, MN",coords:[44.97,-93.26]},{name:"New Orleans, LA",coords:[29.95,-90.07]},{name:"Wichita, KS",coords:[37.68,-97.33]},{name:"Cleveland, OH",coords:[41.49,-81.69]},{name:"Honolulu, HI",coords:[21.30,-157.85]},{name:"Anchorage, AK",coords:[61.21,-149.90]},{name:"Newark, NJ",coords:[40.73,-74.17]},{name:"Baltimore, MD",coords:[39.29,-76.61]},{name:"Charlotte, NC",coords:[35.22,-80.84]},{name:"Indianapolis, IN",coords:[39.76,-86.15]},{name:"Columbus, OH",coords:[39.96,-82.99]},{name:"Virginia Beach, VA",coords:[36.85,-75.97]},{name:"Omaha, NE",coords:[41.25,-95.93]},{name:"Salt Lake City, UT",coords:[40.76,-111.89]},{name:"Birmingham, AL",coords:[33.51,-86.81]},{name:"Little Rock, AR",coords:[34.74,-92.28]},{name:"Bridgeport, CT",coords:[41.17,-73.18]},{name:"Wilmington, DE",coords:[39.74,-75.54]},{name:"Boise, ID",coords:[43.61,-116.20]},{name:"Des Moines, IA",coords:[41.58,-93.60]},{name:"Louisville, KY",coords:[38.25,-85.75]},{name:"Portland, ME",coords:[43.65,-70.25]},{name:"Jackson, MS",coords:[32.29,-90.18]},{name:"Kansas City, MO",coords:[39.09,-94.57]},{name:"Billings, MT",coords:[45.78,-108.50]},{name:"Manchester, NH",coords:[42.99,-71.46]},{name:"Fargo, ND",coords:[46.87,-96.78]},{name:"Providence, RI",coords:[41.82,-71.41]},{name:"Charleston, SC",coords:[32.77,-79.93]},{name:"Sioux Falls, SD",coords:[43.54,-96.72]},{name:"Burlington, VT",coords:[44.47,-73.21]},{name:"Charleston, WV",coords:[38.34,-81.63]},{name:"Cheyenne, WY",coords:[41.13,-104.80]},{name:"Washington, DC",coords:[38.90,-77.03]},{name:"Tucson, AZ",coords:[32.22,-110.92]},{name:"Mesa, AZ",coords:[33.41,-111.83]},{name:"Colorado Springs, CO",coords:[38.83,-104.82]},{name:"Aurora, CO",coords:[39.72,-104.83]},{name:"St. Louis, MO",coords:[38.62,-90.19]},{name:"Pittsburgh, PA",coords:[40.44,-79.99]},{name:"Cincinnati, OH",coords:[39.10,-84.51]},{name:"Raleigh, NC",coords:[35.77,-78.63]},{name:"Greensboro, NC",coords:[36.07,-79.79]},{name:"Memphis, TN",coords:[35.14,-90.04]},{name:"Knoxville, TN",coords:[35.96,-83.92]},{name:"Tulsa, OK",coords:[36.15,-95.99]},{name:"Madison, WI",coords:[43.07,-89.40]},{name:"Spokane, WA",coords:[47.65,-117.42]},{name:"Grand Rapids, MI",coords:[42.96,-85.66]},{name:"Richmond, VA",coords:[37.54,-77.43]},{name:"Savannah, GA",coords:[32.08,-81.09]},{name:"Mobile, AL",coords:[30.69,-88.03]},{name:"Shreveport, LA",coords:[32.52,-93.75]}
+    ].sort(()=>Math.random()-0.5);
 
     let idx=0, score=0, startTime, timer, started=false, answered=false, markers=[], circles=[], gameOver=false, deathCity="";
     const map = L.map('map',{zoomControl:false}).setView([37.8, -96], 4);
@@ -64,50 +113,23 @@
         const d=Date.now()-startTime;
         document.getElementById('time').textContent=`${String(Math.floor(d/60000)).padStart(2,'0')}:${String(Math.floor((d%60000)/1000)).padStart(2,'0')}`;
       },1000);
-      next();
+      updateQueue();
     };
 
-    function next(){
-      answered=false;
-      document.getElementById('progress').textContent=idx+1;
-      const t=document.getElementById('cityTitle');
-      t.textContent=CITIES[idx].name; t.style.display='block';
-      map.flyTo([37.8, -96], 4, {duration:1});
+    function updateQueue() {
+      const container = document.getElementById('cityQueue');
+      container.innerHTML = '';
+      // Show Current + Next 3
+      for (let i = idx; i < idx + 4; i++) {
+        if (i >= CITIES.length) break;
+        const div = document.createElement('div');
+        div.className = `queue-item ${i === idx ? 'active' : (i === idx+1 ? 'next' : '')}`;
+        div.textContent = CITIES[i].name;
+        container.appendChild(div);
+      }
+      document.getElementById('progress').textContent = idx + 1;
     }
 
     map.on('click', e=>{
       if(!started||answered)return; answered=true;
-      const city=CITIES[idx], dist=haversine([e.latlng.lat,e.latlng.lng], city.coords);
-      markers.push(L.circleMarker([e.latlng.lat,e.latlng.lng],{radius:6,color:'#3b82f6',fillOpacity:1}).addTo(map));
-      circles.push(L.circle(city.coords,{radius:100000,color:'#22c55e',weight:2,fillOpacity:0.1}).addTo(map));
-      const m=L.marker(city.coords).addTo(map).bindPopup(`<b>${city.name}</b><br>${dist.toFixed(1)} km`).openPopup();
-      markers.push(m);
-
-      if(dist<=100){
-        score+=Math.max(10, Math.round(100-dist));
-        document.getElementById('score').textContent=score;
-      } else if(!gameOver){
-        gameOver=true; deathCity=city.name;
-        const s=document.getElementById('aliveStatus');
-        s.textContent="OUT"; s.className="info-value status-dead";
-      }
-      
-      map.flyTo(city.coords, 7, {duration:0.8});
-      setTimeout(()=>{
-        markers.forEach(x=>map.removeLayer(x)); markers=[];
-        circles.forEach(x=>map.removeLayer(x)); circles=[];
-        idx++;
-        if(idx < CITIES.length) next(); else end();
-      }, 2000);
-    });
-
-    function end(){
-      clearInterval(timer);
-      document.getElementById('cityTitle').style.display='none';
-      document.getElementById('resTitle').textContent = gameOver ? "Game Over" : "Master of USA";
-      document.getElementById('stats').innerHTML = `Final Score: ${score}<br>Accuracy: ${idx}/100<br>${gameOver?`Failed at: <b>${deathCity}</b>`:""}`;
-      document.getElementById('endModal').style.display='flex';
-    }
-  </script>
-</body>
-</html>
+      const city=CITIES[idx], dist=haversine([e.latlng
